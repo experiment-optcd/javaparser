@@ -32,77 +32,82 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - ubuntu-latest
-        - macos-latest
-        - windows-latest
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
         jdk:
-        - 8
-        - 9
-        - 10
-        - 11
-        - 12
-        - 13
-        - 14
-        - 15
-        - 16
-        - 17
-        - 18
+          - 8
+          - 9
+          - 10
+          - 11
+          - 12
+          - 13
+          - 14
+          - 15
+          - 16
+          - 17
+          - 18
         exclude:
-        - os: macos-latest
-          jdk: 9
-        - os: macos-latest
-          jdk: 10
-        - os: macos-latest
-          jdk: 12
-        - os: macos-latest
-          jdk: 14
+          - os: macos-latest
+            jdk: 9
+          - os: macos-latest
+            jdk: 10
+          - os: macos-latest
+            jdk: 12
+          - os: macos-latest
+            jdk: 14
     env:
       OS: ${{ matrix.os }}
       JDK: ${{ matrix.jdk }}
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout latest code
-      uses: actions/checkout@v4.2.0
-      with:
-        fetch-depth: '0'
-    - name: Set up JDK ${{ matrix.jdk }}
-      uses: actions/setup-java@v4
-      with:
-        distribution: zulu
-        java-version: ${{ matrix.jdk }}
-        java-package: jdk
-    - name: Echo exact java version being used
-      run: java -version
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-    - name: Test with Maven (incl. slow tests)
-      shell: bash
-      run: ./mvnw -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-        -B --errors clean test --activate-profiles AlsoSlowTests
-    - name: CodeCov - JavaParser Core
-      uses: codecov/codecov-action@v4.6.0
-      timeout-minutes: 10
-      with:
-        files: javaparser-core-testing/target/site/jacoco/jacoco.xml,javaparser-core-testing-bdd/target/site/jacoco/jacoco.xml
-        fail_ci_if_error: false
-        verbose: false
-        flags: javaparser-core,AlsoSlowTests,${{ matrix.os }},jdk-${{ matrix.jdk }}
-        env_vars: OS,JDK
-    - name: CodeCov - JavaParser Symbol Solver
-      uses: codecov/codecov-action@v4.6.0
-      timeout-minutes: 10
-      with:
-        file: javaparser-symbol-solver-testing/target/site/jacoco/jacoco.xml
-        fail_ci_if_error: false
-        verbose: false
-        flags: javaparser-symbol-solver,AlsoSlowTests,${{ matrix.os }},jdk-${{ matrix.jdk
-          }}
-        env_vars: OS,JDK
+      - name: Checkout latest code
+        uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: '0'
+      - name: Set up JDK ${{ matrix.jdk }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: ${{ matrix.jdk }}
+          java-package: jdk
+      - name: Echo exact java version being used
+        run: java -version
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Test with Maven (incl. slow tests)
+        shell: bash
+        run: ./mvnw 
+          -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+          -B --errors clean test --activate-profiles AlsoSlowTests "-Dmaven.surefire.reports.dir=target/surefire-reports-bdd"
+          "-Dmaven.surefire.reportFormat=xml" "-Dmaven.surefire.skip=true" "-Dtest.compile.skip=true"
+          "-Dmaven.surefire.reportFormat=none" "-DskipTests=false"
+      - name: CodeCov - JavaParser Core
+        uses: codecov/codecov-action@v4.6.0
+        timeout-minutes: 10
+        with:
+          files: 
+            javaparser-core-testing/target/site/jacoco/jacoco.xml,javaparser-core-testing-bdd/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: false
+          verbose: false
+          flags: javaparser-core,AlsoSlowTests,${{ matrix.os }},jdk-${{ matrix.jdk
+            }}
+          env_vars: OS,JDK
+      - name: CodeCov - JavaParser Symbol Solver
+        uses: codecov/codecov-action@v4.6.0
+        timeout-minutes: 10
+        with:
+          file: javaparser-symbol-solver-testing/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: false
+          verbose: false
+          flags: javaparser-symbol-solver,AlsoSlowTests,${{ matrix.os }},jdk-${{ matrix.jdk
+            }}
+          env_vars: OS,JDK
     name: maven_test (${{ matrix.os }}, ${{ matrix.jdk }})
 'on':
-- push
-- workflow_dispatch
+  - push
+  - workflow_dispatch
